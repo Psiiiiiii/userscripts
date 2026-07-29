@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CW Shaders
 // @version      1.0
-// @description  Шейдеры погоды и времени суток с безопасной фильтровой молнией (фикс мерцания)
+// @description  Шейдеры погоды и времени суток
 // @author       Psiii
 // @copyright    Amina Kotenkova ( https://vk.ru/psiiiiiii / https://github.com/Psiiiiiii )
 // @updateURL    https://raw.githubusercontent.com/Psiiiiiii/userscripts/main/weather.user.js
@@ -9,7 +9,7 @@
 // @match        http*://*.catwar.su/cw3*
 // @match        http*://*.catwar.net/cw3*
 // @grant        GM_addStyle
-// @icon         https://postav-druguyu-kartinku.com/pozhaluysta.png
+// @icon         https://i.ibb.co/4gPVPhWb/image.png
 // ==/UserScript==
 
 (function() {
