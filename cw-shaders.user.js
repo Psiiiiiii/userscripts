@@ -4,8 +4,8 @@
 // @description  Шейдеры погоды и времени суток
 // @author       Psiii
 // @copyright    Amina Kotenkova ( https://vk.ru/psiiiiiii / https://github.com/Psiiiiiii )
-// @updateURL    https://raw.githubusercontent.com/Psiiiiiii/userscripts/main/weather.user.js
-// @downloadURL  https://raw.githubusercontent.com/Psiiiiiii/userscripts/main/weather.user.js
+// @updateURL    https://raw.githubusercontent.com/Psiiiiiii/userscripts/main/cw-shaders.user.js
+// @downloadURL  https://raw.githubusercontent.com/Psiiiiiii/userscripts/main/cw-shaders.user.js
 // @match        http*://*.catwar.su/cw3*
 // @match        http*://*.catwar.net/cw3*
 // @grant        GM_addStyle
