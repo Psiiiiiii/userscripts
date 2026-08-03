@@ -14,6 +14,7 @@
 
 (function() {
     'use strict';
+    if (/\/cw3\/kns(\/|$|\?)/i.test(location.pathname)) return;
 
     let settings = {
         isLocked: false,
