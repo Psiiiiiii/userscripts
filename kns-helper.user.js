@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         KNS Helper
-// @version      1.3.1
+// @version      1.2.1
 // @description  Удобный инструмент для скачивания моделек из конструктора окрасов
 // @author       Psiii
 // @copyright    Amina Kotenkova ( https://vk.ru/psiiiiiii / https://github.com/Psiiiiiii )
@@ -18,7 +18,7 @@
 // ==/UserScript==
 
 // CHANGELOG
-// 1.3.1 – Багфикс
+// 1.2.1 – Багфикс
 // - Больше нельзя спрятать окошко за пределы вкладки
 // - Появилась кнопка сброса положения окошка
 // - Появился скролл, улучшено юзабилити на мобилках
