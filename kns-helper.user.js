@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         KNS Helper
-// @version      1.2
+// @version      1.2.1
 // @description  Удобный инструмент для скачивания моделек из конструктора окрасов
 // @author       Psiii
 // @copyright    Amina Kotenkova ( https://vk.ru/psiiiiiii / https://github.com/Psiiiiiii )
@@ -18,6 +18,11 @@
 // ==/UserScript==
 
 // CHANGELOG
+// 1.2.1 – Багфикс
+// - Больше нельзя спрятать окошко за пределы вкладки
+// - Появилась кнопка сброса положения окошка
+// - Появился скролл, улучшено юзабилити на мобилках
+// - Установлена максимальная высота размера окошка от размера страницы
 // 1.2 – Новые функции:
 // - Редактор окраса: замена одного цвета на другой по всему коду
 // - Перенос и копирование узоров между частями тела (лево/право)
@@ -125,8 +130,11 @@ GM_addStyle(`
     position: fixed;
     top: 20px;
     right: 20px;
-    z-index: 999999;
+    z-index: 9999;
     width: 300px;
+    max-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
     padding: 10px;
     background: var(--bg-panel);
     border: 1px solid var(--br);
@@ -136,6 +144,7 @@ GM_addStyle(`
     font: 13px "Segoe UI", Tahoma, sans-serif;
     user-select: none;
     accent-color: var(--bg-accent);
+    box-sizing: border-box;
 }
 
 #kns-header {
@@ -145,6 +154,7 @@ GM_addStyle(`
     position: relative;
     margin-bottom: 2px;
     cursor: grab;
+    flex-shrink: 0;
 }
 #kns-header:active { cursor: grabbing; }
 
@@ -161,6 +171,29 @@ GM_addStyle(`
 #kns-toggle:hover { color: var(--tx-main); }
 
 #kns-panel.collapsed #kns-body { display: none; }
+
+#kns-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--clr-accent) transparent;
+    margin-right: -8px;
+    padding-right: 6px;
+}
+#kns-body::-webkit-scrollbar { width: 5px; }
+#kns-body::-webkit-scrollbar-track { background: transparent; }
+#kns-body::-webkit-scrollbar-thumb { background: var(--clr-accent); border-radius: 3px; }
+#kns-body::-webkit-scrollbar-thumb:hover { background: var(--tx-green); }
+
+@media (max-width: 480px), (pointer: coarse) {
+    #kns-panel {
+        width: min(300px, calc(100vw - 24px));
+        max-height: calc(100vh - 24px);
+    }
+}
 
 #kns-status {
     min-height: 17px;
@@ -371,9 +404,30 @@ GM_addStyle(`
     transition: color 0.15s;
     height: 23px;
 }
-`);
 
-// ─────────────────────────────────────────────
+#kns-reset-pos-btn {
+    position: fixed;
+    left: 12px;
+    bottom: 12px;
+    z-index: 999999;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--bg-btn);
+    border: 1px solid var(--br);
+    color: var(--tx-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    box-shadow: 0 4px 14px var(--shadow-light);
+    transition: background 0.15s, color 0.15s;
+}
+#kns-reset-pos-btn:hover { background: var(--bg-btn-hov); color: var(--tx-white); }
+`);
 
 function fetchBinary(url) {
     return new Promise((resolve, reject) => {
@@ -425,8 +479,6 @@ function rgbaToCanvas(rgba, width, height) {
     c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
     return c;
 }
-
-// ─────────────────────────────────────────────
 
 function decodeGIFframes(data) {
     const gr = new GifReader(data instanceof Uint8Array ? data : new Uint8Array(data));
@@ -599,8 +651,6 @@ async function getPoseFrames(pose, setStatus) {
 
     return [{ rgba: getRGBA(pose.canvas), delay: 100 }];
 }
-
-// ─────────────────────────────────────────────
 
 function encodeAPNG(frames, width, height) {
     const bufs   = frames.map(f => new Uint8Array(f.rgba).buffer);
@@ -779,8 +829,6 @@ async function downloadCombined(layout, format, setStatus, opts = {}) {
     }
 }
 
-// ─────────────────────────────────────────────
-
 function renderPoseButtons(panel, poses, setStatus) {
     const wrap = panel.querySelector('#kns-poses-wrap');
 
@@ -809,7 +857,22 @@ function renderPoseButtons(panel, poses, setStatus) {
     });
 }
 
-// ─────────────────────────────────────────────
+function clampPanelPosition(panel, left, top) {
+    const w = panel.offsetWidth  || 0;
+    const h = panel.offsetHeight || 0;
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+
+    const minLeft = 0;
+    const maxLeft = Math.max(0, W - w);
+    const minTop  = 0;
+    const maxTop  = Math.max(0, H - h);
+
+    return {
+        left: Math.min(Math.max(left, minLeft), maxLeft),
+        top:  Math.min(Math.max(top, minTop), maxTop),
+    };
+}
 
 function makeDraggable(panel, handle) {
     let ox = 0, oy = 0;
@@ -822,9 +885,10 @@ function makeDraggable(panel, handle) {
         oy = e.clientY - rect.top;
 
         function onMove(e) {
+            const { left, top } = clampPanelPosition(panel, e.clientX - ox, e.clientY - oy);
             panel.style.right = 'auto';
-            panel.style.left = (e.clientX - ox) + 'px';
-            panel.style.top  = (e.clientY - oy) + 'px';
+            panel.style.left = left + 'px';
+            panel.style.top  = top + 'px';
         }
         function onUp() {
             document.removeEventListener('mousemove', onMove);
@@ -837,9 +901,31 @@ function makeDraggable(panel, handle) {
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
     });
+
+    window.addEventListener('resize', () => {
+        if (!panel.style.left || !panel.style.top) return;
+        const { left, top } = clampPanelPosition(panel, parseFloat(panel.style.left), parseFloat(panel.style.top));
+        panel.style.left = left + 'px';
+        panel.style.top  = top + 'px';
+    });
 }
 
-// ─────────────────────────────────────────────
+function createResetPositionButton(panel) {
+    document.getElementById('kns-reset-pos-btn')?.remove();
+
+    const btn = document.createElement('button');
+    btn.id = 'kns-reset-pos-btn';
+    btn.title = 'Сбросить положение окна';
+    btn.textContent = '⟲';
+    btn.onclick = () => {
+        panel.style.left  = '';
+        panel.style.top   = '';
+        panel.style.right = '';
+        try { localStorage.removeItem('kns-pos'); } catch (_) {}
+    };
+    document.body.appendChild(btn);
+    return btn;
+}
 
 function lsGet(key) {
     try {
@@ -858,7 +944,6 @@ function lsSet(key, value) {
     }
 }
 
-// fallback возвращается если ключа нет, JSON битый, или validate(parsed) === false
 function loadJSON(key, fallback, validate) {
     const raw = lsGet(key);
     if (raw === null) return fallback;
@@ -1100,8 +1185,6 @@ function setupCollapsible(header, body, chevron, openDisplay = 'flex') {
     });
 }
 
-// ─────────────────────────────────────────────
-
 function splitCodeFields(code) {
     return code.trim().split(/\s+/);
 }
@@ -1215,10 +1298,6 @@ function applyFieldSwapTransfer(code, fromKey, toKey, positions, mode) {
     return fields.join(' ');
 }
 
-// Щёки: обе стороны живут в ОДНОМ поле кода, разделённые по чётности номера
-// элемента (1,3,5,7 — левая сторона; 2,4,6,8 — правая). Перенос/копирование
-// здесь означает переписать элементы одной стороны в номера другой стороны
-// внутри того же самого поля, а не поменять местами два разных поля.
 function applyCheekTransfer(code, fromKey, toKey, cheekFieldPos, mode) {
     const fields = splitCodeFields(code);
     const idx = cheekFieldPos - 1;
@@ -1230,10 +1309,8 @@ function applyCheekTransfer(code, fromKey, toKey, cheekFieldPos, mode) {
 
     const elements = parseFieldElements(fields[idx]);
 
-    // убираем то, что уже было записано на стороне "куда" — перезаписываем её
     let result = elements.filter(el => el.raw !== undefined || !toNums.includes(Number(el.element)));
 
-    // копируем цвета со стороны "откуда", подставляя парный номер элемента стороны "куда"
     for (const el of elements) {
         if (el.raw !== undefined) continue;
         const num = Number(el.element);
@@ -1258,7 +1335,6 @@ function applyPartTransfer(code, fromKey, toKey, positions, mode) {
     const fromIsCheek = PART_GROUPS[fromKey] === 'cheek';
     const toIsCheek = PART_GROUPS[toKey] === 'cheek';
 
-    // щёку можно переносить только на щёку — другая структура кода
     if (fromIsCheek !== toIsCheek) return null;
 
     if (fromIsCheek) return applyCheekTransfer(code, fromKey, toKey, positions.cheek, mode);
@@ -1354,8 +1430,6 @@ function setupColorEditor(panel, setStatus) {
         setStatus('Узор перемещён');
     };
 }
-
-// ─────────────────────────────────────────────
 
 function createPanel() {
     document.getElementById('kns-panel')?.remove();
@@ -1466,8 +1540,9 @@ function createPanel() {
         const pos = JSON.parse(localStorage.getItem('kns-pos'));
         if (pos?.left && pos?.top) {
             panel.style.right = 'auto';
-            panel.style.left  = pos.left;
-            panel.style.top   = pos.top;
+            const { left, top } = clampPanelPosition(panel, parseFloat(pos.left), parseFloat(pos.top));
+            panel.style.left = left + 'px';
+            panel.style.top  = top + 'px';
         }
     } catch (_) {}
 
@@ -1508,6 +1583,7 @@ function createPanel() {
     };
 
     makeDraggable(panel, panel.querySelector('#kns-header'));
+    createResetPositionButton(panel);
 
     const savedSettings = (() => {
         try { return JSON.parse(localStorage.getItem('kns-settings')) || {}; } catch (_) { return {}; }
@@ -1564,8 +1640,6 @@ function createPanel() {
     return { panel, setStatus };
 }
 
-    // ─────────────────────────────────────────────
-
 async function pollUntil(getValue, isReady, fallback, timeout = 10000, interval = 200) {
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
@@ -1604,7 +1678,6 @@ async function init() {
         setupColorEditor(panel, setStatus);
     }
 }
-// рома фембойчик
 init();
 
 })();
