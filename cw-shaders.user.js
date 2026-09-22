@@ -168,6 +168,8 @@
     .cw-btn:hover { background: var(--bg-btn-hov); border-color: var(--clr-accent); }
     .cw-btn.active-tl { background: var(--bg-accent); border-color: var(--clr-accent); color: var(--tx-white); }
     .cw-disabled-block { opacity: 0.4; pointer-events: none; filter: saturate(0.6); }
+
+    #cages_div { opacity: 0.8 !important; }
     `;
 
     GM_addStyle(CSS_STYLES);
